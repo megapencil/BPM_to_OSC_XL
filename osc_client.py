@@ -1,3 +1,9 @@
+# OSC client of BPMtoOSC by Leonhard Axtner (d00mfish), 2022, unchanged.
+# Copyright (C) 2022 Leonhard Axtner
+# This program is free software: you can redistribute it and/or modify it under the terms of the
+# GNU General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version. See LICENSE.
+
 from pythonosc.udp_client import SimpleUDPClient
 
 
