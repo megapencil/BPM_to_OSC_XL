@@ -58,7 +58,6 @@ DEFAULT_CONFIG = {
     'TEMPO': {'min_bpm': '90',  # detected tempo is folded into min_bpm to 2 * min_bpm
               'output_offset_ms': '0'},  # output runs this much ahead, to make up for latency after the app
     'UI': {'always_on_top': 'no',
-           'compact': 'no',
            'settings_open': 'yes',
            'full_width': '480',
            'compact_width': '420',
@@ -159,6 +158,12 @@ def read_config() -> configparser.ConfigParser:
             remove(CONF_PATH)
         config = configparser.ConfigParser()
 
+    # settings earlier versions saved that are no longer used
+    for section, key in (('UI', 'compact'), ('UI', 'dark_mode'), ('TEMPO', 'onset_method'),
+                         ('AUDIO', 'device_index')):
+        if config.has_section(section):
+            config.remove_option(section, key)
+
     for section, values in DEFAULT_CONFIG.items():
         if not config.has_section(section):
             config.add_section(section)
@@ -227,7 +232,6 @@ class Main_Frame(wx.Frame):
 
         # restore window state from last session
         self.set_always_on_top(self.config.getboolean('UI', 'always_on_top'))
-        self.set_compact(self.config.getboolean('UI', 'compact'))
         self.restore_position()
         self.button_startstop.SetFocus()  # keep focus out of text fields, so shortcuts work right away
         self.Bind(wx.EVT_HOTKEY, self.on_global_resync, id=HOTKEY_RESYNC)
@@ -728,9 +732,9 @@ class Main_Frame(wx.Frame):
         self.config['UI']['always_on_top'] = 'yes' if on_top else 'no'
 
     def set_compact(self, compact: bool):
-        """Compact mode only shows beat leds and the bpm displays, controlled by keyboard shortcuts"""
+        """Compact mode only shows beat leds and the bpm displays, controlled by keyboard shortcuts.
+        Not remembered: the app always starts in the full view"""
         self.menu_compact.Check(compact)
-        self.config['UI']['compact'] = 'yes' if compact else 'no'
         if compact == self.compact:
             return
         self.remember_size()
