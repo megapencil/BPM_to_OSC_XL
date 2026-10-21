@@ -60,13 +60,27 @@ The tempo range (e.g. 90-180 BPM) sets which tempo is reported when the music co
 speed: a 174 BPM track isn't reported as 87.
 
 ## Status and beat lights
-Next to the live tempo:
+Above the SYNC button:
 - **LOCKED**: clear beats in the music, the tempo and beat follow it.
 - **COASTING**: no clear beat right now (e.g. a breakdown), the clock carries on at the last tempo and phase.
 - **LISTENING**: finding the tempo, takes a few seconds of music.
 - **NO SIGNAL**: the input is silent.
 
-The beat lights show the beat of the bar, beat 1 in red.
+The beat lights show the beat of the bar, beat 1 in red. A faint flash behind a tempo marks each beat: behind
+LIVE when following the music, behind SEND in manual mode.
+
+## When the detection struggles: take over by hand
+Some music is hard to follow automatically: live recordings with a drifting tempo, swing and shuffle, music
+without clear drums, rubato, unusual or changing time signatures. If the status keeps dropping to COASTING or
+the tempo jumps around, take over manually:
+1. **Tap Space in time with the beat.** From the third tap, sync switches off (the button shows MANUAL) and the
+   tapped tempo takes over. Keep tapping to refine it: the tempo is the average of the taps, and each tap
+   puts a beat exactly on it. Taps more than a second apart start a new count.
+2. **Fine tune** with Up / Down (+1 / -1 BPM), or Right / Left to double or halve.
+3. **Press R on the first beat of a bar** to put the bar back in place.
+4. **Press S to follow the music again** when it has a clear beat.
+
+The manual tempo keeps running steadily until you change it, also through breakdowns and silence.
 
 <img src="docs/screenshot_folded.png" width="380" alt="Settings folded away"> <img src="docs/screenshot_compact.png" width="320" alt="Compact mode">
 

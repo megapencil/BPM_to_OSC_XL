@@ -258,7 +258,7 @@ class Main_Frame(wx.Frame):
         self.show_detection_state(level)
 
     def show_detection_state(self, level):
-        """Status next to the live tempo: is the tempo coming from the music, or is the clock coasting?"""
+        """Status above the sync button: is the tempo coming from the music, or is the clock coasting?"""
         if not self.running:
             state = None
         elif level < 1:
@@ -438,50 +438,47 @@ class Main_Frame(wx.Frame):
 # BPM DISPLAYS: | LIVE | SYNC / 1/2 | SEND |
         numberfont = widgets.font(30, wx.FONTWEIGHT_SEMIBOLD, display=True)
 
-        def bpm_display(caption, colour, status=None):
-            """Small caption over a big number, sized for the widest tempo so it doesn't jump around"""
-            box = wx.BoxSizer(wx.VERTICAL)
-            # pulses on the beat, under the live tempo when synced, under the send tempo in manual
-            number = widgets.PulseNumber(panel, colour, numberfont)
-            caption_row = wx.BoxSizer(wx.HORIZONTAL)
-            caption_row.Add(heading(caption), 0, wx.ALIGN_CENTRE_VERTICAL)
-            if status is not None:
-                caption_row.Add(status, 0, wx.LEFT | wx.ALIGN_CENTRE_VERTICAL, border=8)
-            box.Add(caption_row, 0, wx.ALIGN_CENTRE_HORIZONTAL)
-            box.Add(number, 0, wx.EXPAND)
-            return box, number
-
-        # detection status, next to the live caption
-        self.status_text = wx.StaticText(panel, label="", style=wx.ST_NO_AUTORESIZE)
+        # detection status, above the sync button in the middle column
+        self.status_text = wx.StaticText(panel, label="", style=wx.ALIGN_CENTRE_HORIZONTAL | wx.ST_NO_AUTORESIZE)
         self.status_text.SetFont(widgets.font(8, wx.FONTWEIGHT_SEMIBOLD))
         self.status_text.SetMinSize(self.status_text.GetTextExtent("\u25cf NO SIGNAL") + wx.Size(4, 0))
 
-        live_box, self.live_number = bpm_display("Live", self.theme['live_on'], self.status_text)
-        send_box, self.send_number = bpm_display("Send", self.theme['send_on'])
+        # pulse on the beat, under the live tempo when synced, under the send tempo in manual;
+        # sized for the widest tempo so the layout doesn't jump around
+        self.live_number = widgets.PulseNumber(panel, self.theme['live_on'], numberfont)
+        self.send_number = widgets.PulseNumber(panel, self.theme['send_on'], numberfont)
 
 # SYNC & HALF TIME BUTTONS between the displays
+        # as tall as the numbers' flash boxes, both buttons the same height
         middle = wx.BoxSizer(wx.VERTICAL)
-        self.button_sync = widgets.FlatButton(panel, 'SYNC', self.theme, toggle=True, size=(96, 30),
+        self.button_sync = widgets.FlatButton(panel, 'SYNC', self.theme, toggle=True, size=(96, 20),
                                               accent=self.theme['sync_fill'], font_=buttonfont)
         self.button_sync.SetForegroundColour(self.theme['status_sync'])
         self.button_sync.SetValue(True)
         self.button_sync.SetToolTip("Sync send tempo to live tempo (S)")
         self.buttons_to_disable.append(self.button_sync)
-        middle.Add(self.button_sync, 0, wx.EXPAND)
+        middle.Add(self.button_sync, 1, wx.EXPAND)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.on_button_sync, self.button_sync)
 
-        self.button_halftime = widgets.FlatButton(panel, '1/2', self.theme, toggle=True, size=(96, 26),
+        self.button_halftime = widgets.FlatButton(panel, '1/2', self.theme, toggle=True, size=(96, 20),
                                                   accent=self.theme['toggle_fill'], font_=buttonfont)
         self.button_halftime.SetToolTip("Half time (H)")
         self.buttons_to_disable.append(self.button_halftime)
-        middle.Add(self.button_halftime, 0, wx.EXPAND | wx.TOP, border=6)
+        middle.AddSpacer(6)  # a spacer, not a border: a border would count towards this button's share
+        middle.Add(self.button_halftime, 1, wx.EXPAND)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.on_button_halftime, self.button_halftime)
 
-        bpm_row = wx.BoxSizer(wx.HORIZONTAL)
-        bpm_row.Add(live_box, 1, wx.ALIGN_CENTRE_VERTICAL)
-        bpm_row.Add(middle, 0, wx.ALIGN_CENTRE_VERTICAL)
-        bpm_row.Add(send_box, 1, wx.ALIGN_CENTRE_VERTICAL)
-        sizer.Add(bpm_row, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP | wx.BOTTOM, border=margin - 4)
+        # one grid, so numbers, flash boxes and buttons share the same top and bottom edges
+        bpm_grid = wx.FlexGridSizer(rows=2, cols=3, vgap=4, hgap=0)
+        bpm_grid.AddGrowableCol(0, 1)
+        bpm_grid.AddGrowableCol(2, 1)
+        bpm_grid.Add(heading("Live"), 0, wx.ALIGN_CENTRE_HORIZONTAL)
+        bpm_grid.Add(self.status_text, 0, wx.EXPAND)
+        bpm_grid.Add(heading("Send"), 0, wx.ALIGN_CENTRE_HORIZONTAL)
+        bpm_grid.Add(self.live_number, 0, wx.EXPAND)
+        bpm_grid.Add(middle, 0, wx.EXPAND)
+        bpm_grid.Add(self.send_number, 0, wx.EXPAND)
+        sizer.Add(bpm_grid, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP | wx.BOTTOM, border=margin - 4)
 
 # BUTTONS: | START / STOP | TAP | RESYNC |
 #          |  -1  |  +1  |  /2  |  x2  |
@@ -862,7 +859,11 @@ class Main_Frame(wx.Frame):
                 self.clock_wake.set()
 
         elif len(self.last_tap) == 1:
-            self.last_tap.append((now, now - self.last_tap[-1][0]))
+            if now - self.last_tap[0][0] > 1:
+                # the first tap is too old to belong to this run, start over with this one
+                self.last_tap = [(now, None)]
+            else:
+                self.last_tap.append((now, now - self.last_tap[-1][0]))
 
         else:
             # if no taps yet, add first tap

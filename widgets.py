@@ -11,6 +11,7 @@ these draw themselves with anti-aliased rounded shapes in the colours of the cur
 """
 from time import perf_counter
 
+import numpy as np
 import wx
 
 
@@ -192,7 +193,7 @@ class FlatButton(wx.Control):
 class LevelMeter(wx.Control):
     """Slim rounded input level bar (0-100, the caller maps dB to it), green, then yellow, then red towards the top"""
 
-    def __init__(self, parent, theme, height=6):
+    def __init__(self, parent, theme, height=8):
         super().__init__(parent, size=(-1, height), style=wx.BORDER_NONE)
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         self.theme = theme
@@ -271,6 +272,7 @@ class PulseNumber(wx.Control):
 
     PEAK = 0.22  # strength of the flash, as a mix of the number's colour into the background
     DECAY = 0.12  # seconds for the flash to fade to about a third
+    PAD = 12  # space above and below the digits, inside the flash box
 
     def __init__(self, parent, colour, font_, widest="188.8"):
         super().__init__(parent, style=wx.BORDER_NONE)
@@ -284,12 +286,33 @@ class PulseNumber(wx.Control):
         dc = wx.ClientDC(self)
         dc.SetFont(font_)
         w, h = dc.GetTextExtent(widest)
-        self.SetMinSize(wx.Size(w + 28, h + 6))
+        self.ink_top, self.ink_height = self._digit_ink(font_)
+        self.SetMinSize(wx.Size(w + 28, self.ink_height + 2 * self.PAD))
         self.pill_width = w + 24
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.on_timer, self.timer)
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
+
+    @staticmethod
+    def _digit_ink(font_):
+        """Top and height of the digits' actual shapes within a line of text. The line also has room for
+        descenders and accents, centring the line would put the digits off centre"""
+        dc = wx.MemoryDC()
+        dc.SetFont(font_)
+        w, h = dc.GetTextExtent("0123456789")
+        bmp = wx.Bitmap(w, h, 24)
+        dc.SelectObject(bmp)
+        dc.SetBackground(wx.BLACK_BRUSH)
+        dc.Clear()
+        dc.SetTextForeground(wx.WHITE)
+        dc.DrawText("0123456789", 0, 0)
+        dc.SelectObject(wx.NullBitmap)
+        pixels = np.frombuffer(bytes(bmp.ConvertToImage().GetData()), np.uint8).reshape(h, w, 3)
+        rows = np.where(pixels.max(axis=(1, 2)) > 96)[0]
+        if len(rows) == 0:
+            return 0, h
+        return int(rows[0]), int(rows[-1] - rows[0] + 1)
 
     def on_destroy(self, event):
         # a running timer must not fire into a destroyed window
@@ -340,4 +363,5 @@ class PulseNumber(wx.Control):
         dc.SetFont(self.GetFont())
         dc.SetTextForeground(self.colour)
         tw, th = dc.GetTextExtent(self.label)
-        dc.DrawText(self.label, (w - tw) // 2, (h - th) // 2)
+        # centre the digits themselves, not the text line
+        dc.DrawText(self.label, (w - tw) // 2, round((h - self.ink_height) / 2) - self.ink_top)
