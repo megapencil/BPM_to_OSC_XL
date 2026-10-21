@@ -9,6 +9,8 @@
 The native Windows buttons and the segmented peak meter look dated next to Windows 11,
 these draw themselves with anti-aliased rounded shapes in the colours of the current theme.
 """
+from time import perf_counter
+
 import wx
 
 
@@ -261,3 +263,81 @@ class BeatLights(wx.Control):
                 colour = self.theme['led_downbeat'] if i == 0 else self.theme['led_on']
             gc.SetBrush(wx.Brush(colour))
             gc.DrawRoundedRectangle(i * (pill + gap), 0, pill, h, h / 2)
+
+
+class PulseNumber(wx.Control):
+    """A big number on a rounded background that flashes faintly in the number's colour and fades out,
+    Pulse() on every beat"""
+
+    PEAK = 0.22  # strength of the flash, as a mix of the number's colour into the background
+    DECAY = 0.12  # seconds for the flash to fade to about a third
+
+    def __init__(self, parent, colour, font_, widest="188.8"):
+        super().__init__(parent, style=wx.BORDER_NONE)
+        self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
+        self.SetFont(font_)
+        self.colour = wx.Colour(colour)
+        self.label = "---"
+        self.intensity = 0.0
+        self.pulse_start = None
+        # sized for the widest tempo, so the layout doesn't jump around
+        dc = wx.ClientDC(self)
+        dc.SetFont(font_)
+        w, h = dc.GetTextExtent(widest)
+        self.SetMinSize(wx.Size(w + 28, h + 6))
+        self.pill_width = w + 24
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.on_timer, self.timer)
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.on_destroy)
+
+    def on_destroy(self, event):
+        # a running timer must not fire into a destroyed window
+        if event.GetEventObject() is self:
+            self.timer.Stop()
+        event.Skip()
+
+    def AcceptsFocus(self):
+        return False
+
+    def SetLabel(self, label):
+        if label != self.label:
+            self.label = label
+            self.Refresh()
+
+    def GetLabel(self):
+        return self.label
+
+    def Pulse(self):
+        self.pulse_start = perf_counter()
+        self.intensity = 1.0
+        self.Refresh()
+        if not self.timer.IsRunning():
+            self.timer.Start(16)
+
+    def on_timer(self, event):
+        elapsed = perf_counter() - self.pulse_start
+        self.intensity = 2.718 ** (-elapsed / self.DECAY)
+        if self.intensity < 0.02:
+            self.intensity = 0.0
+            self.timer.Stop()
+        self.Refresh()
+
+    def on_paint(self, event):
+        dc = wx.AutoBufferedPaintDC(self)
+        background = self.GetParent().GetBackgroundColour()
+        dc.SetBackground(wx.Brush(background))
+        dc.Clear()
+        w, h = self.GetClientSize()
+        if self.intensity > 0:
+            gc = wx.GraphicsContext.Create(dc)
+            gc.SetPen(wx.TRANSPARENT_PEN)
+            gc.SetBrush(wx.Brush(blend(background, self.colour, self.PEAK * self.intensity)))
+            pill = min(self.pill_width, w)
+            gc.DrawRoundedRectangle((w - pill) / 2, 0, pill, h, 6)
+            del gc
+        # text through the dc, see FlatButton
+        dc.SetFont(self.GetFont())
+        dc.SetTextForeground(self.colour)
+        tw, th = dc.GetTextExtent(self.label)
+        dc.DrawText(self.label, (w - tw) // 2, (h - th) // 2)

@@ -441,10 +441,8 @@ class Main_Frame(wx.Frame):
         def bpm_display(caption, colour, status=None):
             """Small caption over a big number, sized for the widest tempo so it doesn't jump around"""
             box = wx.BoxSizer(wx.VERTICAL)
-            number = wx.StaticText(panel, label="---", style=wx.ALIGN_CENTRE_HORIZONTAL | wx.ST_NO_AUTORESIZE)
-            number.SetFont(numberfont)
-            number.SetForegroundColour(colour)
-            number.SetMinSize(number.GetTextExtent("188.8") + wx.Size(10, 0))
+            # pulses on the beat, under the live tempo when synced, under the send tempo in manual
+            number = widgets.PulseNumber(panel, colour, numberfont)
             caption_row = wx.BoxSizer(wx.HORIZONTAL)
             caption_row.Add(heading(caption), 0, wx.ALIGN_CENTRE_VERTICAL)
             if status is not None:
@@ -1147,6 +1145,9 @@ class Main_Frame(wx.Frame):
         """Output for every beat of the clock (clock thread)"""
         beat_in_bar = beat_number % 4
         self.set_bar_position(beat_in_bar)
+        # pulse under the tempo that drives the output: live when synced, send in manual
+        pulsing = self.live_number if self.sync else self.send_number
+        wx.CallAfter(lambda: pulsing and pulsing.Pulse())  # not when the window is already destroyed
 
         client = self.osc_client
         if client is not None and self.config.getboolean('OSC', 'SEND_BEAT'):
