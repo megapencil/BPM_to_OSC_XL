@@ -299,6 +299,9 @@ class Main_Frame(wx.Frame):
         """
 
         panel = wx.Panel(self)
+        # Windows composes the whole panel off screen and shows it at once: without this, resizing redraws
+        # the background and then each control one by one, which flickers
+        panel.SetDoubleBuffered(True)
         self.panel = panel
         # set before the controls are created, they inherit it
         panel.SetFont(widgets.font(9))
@@ -530,6 +533,8 @@ class Main_Frame(wx.Frame):
         self.main_sizer.Show(self.audiosizer, settings, recursive=True)
         self.main_sizer.Show(self.button_sizer, not self.compact, recursive=True)
         self.settings_header.SetLabel(("\u25be  " if self.settings_open else "\u25b8  ") + "SETTINGS")
+        # compact mode never shows the settings, so the menu item (and its Ctrl+E) would do nothing visible
+        self.menu_settings.Enable(not self.compact)
 
         self.SetMinSize(wx.DefaultSize)
         self.SetMaxSize(wx.DefaultSize)

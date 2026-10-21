@@ -50,7 +50,7 @@ class FlatButton(wx.Control):
 
     def __init__(self, parent, label, theme, toggle=False, size=wx.DefaultSize, accent=None, font_=None,
                  subtle=False, align_left=False):
-        super().__init__(parent, size=size, style=wx.BORDER_NONE)
+        super().__init__(parent, size=size, style=wx.BORDER_NONE | wx.FULL_REPAINT_ON_RESIZE)
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         self.label = label
         self.theme = theme
@@ -194,7 +194,7 @@ class LevelMeter(wx.Control):
     """Slim rounded input level bar (0-100, the caller maps dB to it), green, then yellow, then red towards the top"""
 
     def __init__(self, parent, theme, height=8):
-        super().__init__(parent, size=(-1, height), style=wx.BORDER_NONE)
+        super().__init__(parent, size=(-1, height), style=wx.BORDER_NONE | wx.FULL_REPAINT_ON_RESIZE)
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         self.theme = theme
         self.level = 0.0  # 0-100
@@ -234,7 +234,7 @@ class BeatLights(wx.Control):
     """Four rounded beat lights, the current beat of the bar lit, beat 1 in its own colour"""
 
     def __init__(self, parent, theme, height=8):
-        super().__init__(parent, size=(-1, height), style=wx.BORDER_NONE)
+        super().__init__(parent, size=(-1, height), style=wx.BORDER_NONE | wx.FULL_REPAINT_ON_RESIZE)
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         self.theme = theme
         self.beat = None
@@ -275,7 +275,7 @@ class PulseNumber(wx.Control):
     PAD = 12  # space above and below the digits, inside the flash box
 
     def __init__(self, parent, colour, font_, widest="188.8"):
-        super().__init__(parent, style=wx.BORDER_NONE)
+        super().__init__(parent, style=wx.BORDER_NONE | wx.FULL_REPAINT_ON_RESIZE)
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         self.SetFont(font_)
         self.colour = wx.Colour(colour)
